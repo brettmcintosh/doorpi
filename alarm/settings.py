@@ -1,0 +1,14 @@
+CAMERA = True
+CAMERA_ROTATION = 180
+CAMERA_RESOLUTION = (1400, 1400)
+CAMERA_FRAMERATE = 15
+
+VIDEO_PATH = "/home/pi/camera/"
+
+SENSORS = [MOTION_SENSOR, DOOR_SENSOR]
+
+MOTION_SENSOR = {'pin': 18, }
+
+DOOR_SENSOR = {'pin': 23,
+               'pull_up': True, }
+

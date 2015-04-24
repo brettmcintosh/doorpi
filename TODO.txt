@@ -1,0 +1,18 @@
+Objects
+
+AlarmManager
+DoorSensor
+MotionSensor
+Event
+LEDAnimation
+Sound
+Message
+Camera
+Video
+
+DoorPi
+
+
+Settings file
+celery for async events?
+web interface?
