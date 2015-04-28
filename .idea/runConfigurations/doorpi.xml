@@ -1,0 +1,27 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="doorpi" type="PythonConfigurationType" factoryName="Python">
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="PARENT_ENVS" value="true" />
+    <envs>
+      <env name="PYTHONUNBUFFERED" value="1" />
+    </envs>
+    <option name="SDK_HOME" value="ssh://pi@doorpi:22/usr/bin/python" />
+    <option name="WORKING_DIRECTORY" value="" />
+    <option name="IS_MODULE_SDK" value="false" />
+    <option name="ADD_CONTENT_ROOTS" value="true" />
+    <option name="ADD_SOURCE_ROOTS" value="true" />
+    <module name="doorpi" />
+    <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+    <PathMappingSettings>
+      <option name="pathMappings">
+        <list>
+          <mapping local-root="$PROJECT_DIR$" remote-root="$PROJECT_DIR$/../../../pi/scratch/doorpi" />
+        </list>
+      </option>
+    </PathMappingSettings>
+    <option name="SCRIPT_NAME" value="" />
+    <option name="PARAMETERS" value="" />
+    <option name="SHOW_COMMAND_LINE" value="false" />
+    <method />
+  </configuration>
+</component>
