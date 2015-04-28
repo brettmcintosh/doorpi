@@ -15,3 +15,6 @@ class Sensor(object):
             io.setup(self.pin, io.IN, pull_up_down=io.PUD_UP)
         else:
             io.setup(self.pin, io.IN)
+
+    def senses_something(self):
+        pass

@@ -26,7 +26,7 @@ file_path = "/home/pi/sec/sensor.log"
 # configure the pi's camera
 camera = picamera.PiCamera()
 camera.rotation = 180
-camera.resolution = (1400,1400)
+camera.resolution = (1400, 1400)
 camera.framerate = 15
 
 # initialize variables

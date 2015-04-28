@@ -1,7 +1,7 @@
 from picamera.camera import PiCamera
 from datetime import datetime
 
-import alarm.settings as settings
+from alarm import settings
 
 
 class Camera(PiCamera):
@@ -16,3 +16,7 @@ class Camera(PiCamera):
         self.rotation = settings.CAMERA_ROTATION
         self.resolution = settings.CAMERA_RESOLUTION
         self.framerate = settings.CAMERA_FRAMERATE
+
+    def start_recording(self, output, format=None, resize=None, splitter_port=1, **options):
+        output = self.get_video_path()
+        super(Camera, self).start_recording(self, output, format, resize, splitter_port, **options)
