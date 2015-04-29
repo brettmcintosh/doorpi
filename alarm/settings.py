@@ -10,10 +10,12 @@ LOG_FILE_PATH = "/home/pi/sec/sensor.log"
 # use passlib.hash.sha256_crypt.encrypt("password")
 KEY_HASHES = ('', )
 
-MOTION_SENSOR = {'pin': 18, }
+MOTION_SENSOR = {'pin': 18,
+                 'name': 'Motion Hallway'}
 
 DOOR_SENSOR = {'pin': 23,
-               'pull_up': True, }
+               'pull_up': True,
+               'name': 'Door'}
 
 SENSORS = [MOTION_SENSOR, DOOR_SENSOR]
 

@@ -1,0 +1,43 @@
+Sensor Process
+    while True:
+        scan sensors
+        if sensors sense and alarmmgr state is not triggered:
+            set alarmmgr state to triggered
+        
+Routine Mgr Process
+    while True:
+        if mgr state is triggered and entry routine is not started:
+            start entry routine
+        if mgr state is triggered and entry routine is started:
+            record video, etc.
+        
+Alarm Mgr
+    listen for event (json encoded?)
+    
+    if key event:
+        verify key
+        if key valid:
+            update routine
+    
+    if sensor event:
+        update routine
+        
+        
+Arm:
+client sends key to alarmmgr 
+alarmmgr verifies key
+if valid, alarmmgr starts arm routine (new process?)
+
+Disarm:
+client sends key to alarmmgr
+alarmmgr verifies key
+if valid, alarmmgr starts disarm routine (kill process or change?)
+
+Sensor Trigger:
+sensor client sends sensor event to alarmmgr
+alarm mgr starts or updates entry routine
+
+
+Question:
+can sensor scan subprocess happen concurrently with server listen?
+

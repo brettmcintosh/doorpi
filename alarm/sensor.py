@@ -3,9 +3,10 @@ import RPi.GPIO as io
 
 class Sensor(object):
 
-    def __init__(self, pin=None, mode=io.BCM, pull_up=False):
+    def __init__(self, pin=None, mode=io.BCM, name='', pull_up=False):
         self.pin = pin
         self.mode = mode
+        self.name = name
         self.pull_up = pull_up
 
     def setup(self):

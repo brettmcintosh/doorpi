@@ -1,6 +1,11 @@
 from passlib.hash import sha256_crypt
+import threading
+import SocketServer
+import socket
+import json
+import time
 
-from alarm import settings
+import settings
 from camera import Camera
 from sensor import Sensor
 from notification import LEDRing
@@ -61,6 +66,15 @@ class AlarmManager(object):
     def disarm(self):
         pass
 
+    def handle_request(self, request_dict):
+        action = request_dict['action']
+
+        if action == 'nfc_scan':
+            print('NFC Scan')
+
+        elif action == 'sensor':
+            print('Sensor Event')
+
     @staticmethod
     def key_valid(unverified_key):
 
@@ -71,5 +85,74 @@ class AlarmManager(object):
         return False
 
 
+class AlarmRequestHandler(SocketServer.BaseRequestHandler):
+
+    def handle(self):
+        data = self.request.recv(1024)
+        # parse json
+        request = json.loads(data)
+        # pass request dictionary to the manager's request handler
+        self.server.mgr.handle_request(request)
+
+        # print(data)
+        # response = "You said: %s. Triggered: %s. Thread: %s.\n" % (data,
+        #                                                            self.server.mgr.is_triggered,
+        #                                                            threading.current_thread().name)
+        # if not self.server.mgr.is_triggered:
+        #     self.server.mgr.is_triggered = True
+        # else:
+        #     self.server.mgr.is_triggered = False
+        # self.request.sendall(response)
+
+
+class AlarmSocketServer(SocketServer.ThreadingTCPServer):
+
+    def __init__(self, server_address, handler, bind_and_activate=True, mgr=None):
+        SocketServer.ThreadingTCPServer.__init__(self, server_address, handler, bind_and_activate=True)
+        self.mgr = mgr
+
+
 class SettingsError(Exception):
     pass
+
+
+def client(ip, port, message):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((ip, port))
+    try:
+        sock.sendall(message)
+        response = sock.recv(1024)
+        print "Received: {}".format(response)
+    finally:
+        sock.close()
+
+
+if __name__ == "__main__":
+    # Port 0 means to select an arbitrary unused port
+    HOST, PORT = "0.0.0.0", 8080
+
+    mgr = AlarmManager()
+
+    server = AlarmSocketServer((HOST, PORT), AlarmRequestHandler, mgr=mgr)
+    ip, port = 'localhost', 8080
+
+    # Start a thread with the server -- that thread will then start one
+    # more thread for each request
+    server_thread = threading.Thread(target=server.serve_forever)
+    # Exit the server thread when the main thread terminates
+    server_thread.daemon = True
+    server_thread.start()
+    print "Server loop running in thread:", server_thread.name
+
+    # message1 = json.dumps({'action': 'nfc_scan', 'show': 'Simpsons'})
+    # message2 = json.dumps({'action': 'sensor', 'show': 'Simpsons'})
+    #
+    # for _ in xrange(50):
+    #     start = time.time()
+    #     client(ip, port, message1)
+    #     client(ip, port, message2)
+    #     end = time.time()
+    #     print(str(end-start))
+    #
+    # server.shutdown()
+    # del server
