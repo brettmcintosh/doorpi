@@ -1,8 +1,12 @@
 from passlib.hash import sha256_crypt
+import threading
+import SocketServer
+import socket
+import json
 
-from alarm import settings
-from camera import Camera
-from sensor import Sensor
+import settings
+# from camera import Camera
+# from sensor import Sensor
 from notification import LEDRing
 
 
@@ -71,5 +75,65 @@ class AlarmManager(object):
         return False
 
 
+class AlarmRequestHandler(SocketServer.BaseRequestHandler):
+
+    def handle(self):
+        data = self.request.recv(1024)
+        print(data)
+        response = "You said: %s. Triggered: %s. Thread: %s.\n" % (data,
+                                                                   self.server.mgr.is_triggered,
+                                                                   threading.current_thread().name)
+        if not self.server.mgr.is_triggered:
+            self.server.mgr.is_triggered = True
+        else:
+            self.server.mgr.is_triggered = False
+        self.request.sendall(response)
+
+
+class AlarmSocketServer(SocketServer.ThreadingTCPServer):
+
+    def __init__(self, server_address, handler, bind_and_activate=True, mgr=None):
+        SocketServer.ThreadingTCPServer.__init__(self, server_address, handler, bind_and_activate=True)
+        self.mgr = mgr
+
+
 class SettingsError(Exception):
     pass
+
+
+def client(ip, port, message):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((ip, port))
+    try:
+        sock.sendall(message)
+        response = sock.recv(1024)
+        print "Received: {}".format(response)
+    finally:
+        sock.close()
+
+
+if __name__ == "__main__":
+    # Port 0 means to select an arbitrary unused port
+    HOST, PORT = "localhost", 8888
+
+    mgr = AlarmManager()
+
+    server = AlarmSocketServer((HOST, PORT), AlarmRequestHandler, mgr=mgr)
+    ip, port = server.server_address
+
+    # Start a thread with the server -- that thread will then start one
+    # more thread for each request
+    server_thread = threading.Thread(target=server.serve_forever)
+    # Exit the server thread when the main thread terminates
+    server_thread.daemon = True
+    server_thread.start()
+    print "Server loop running in thread:", server_thread.name
+
+    client(ip, port, "Hello World 1")
+    client(ip, port, "Hello World 2")
+    client(ip, port, "Hello World 3")
+    client(ip, port, "Hello World 3")
+    client(ip, port, "Hello World 3")
+    client(ip, port, "Hello World 3")
+
+    server.shutdown()

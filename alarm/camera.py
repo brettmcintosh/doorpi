@@ -1,5 +1,8 @@
-from picamera.camera import PiCamera
 from datetime import datetime
+try:
+    from picamera.camera import PiCamera
+except (RuntimeError, AttributeError):
+    print("Not on RPi.  Can't access camera.")
 
 from alarm import settings
 
