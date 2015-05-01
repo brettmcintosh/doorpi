@@ -131,10 +131,12 @@ if __name__ == "__main__":
     # Port 0 means to select an arbitrary unused port
     HOST, PORT = "0.0.0.0", 8080
 
+
     mgr = AlarmManager()
 
     server = AlarmSocketServer((HOST, PORT), AlarmRequestHandler, mgr=mgr)
     ip, port = 'localhost', 8080
+
 
     # Start a thread with the server -- that thread will then start one
     # more thread for each request
@@ -156,3 +158,4 @@ if __name__ == "__main__":
     #
     # server.shutdown()
     # del server
+
