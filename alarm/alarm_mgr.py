@@ -21,9 +21,13 @@ class AlarmManager(object):
     def __init__(self):
         self.camera = None
         self.sensors = set()
+        self.sensor_scan_thread = None
+        self._stop_sensor_scan = False
+        self._sensor_scan_stopped = threading.Event()
         self._status = None
         self.is_triggered = False
         self.sent_notification = False
+        self.server = None
 
     @property
     def status(self):
@@ -33,12 +37,14 @@ class AlarmManager(object):
     def status(self, status):
         assert status in ALARM_CODES
         # save status to STATUS_PATH file
-        with open(settings.STATUS_FILE_PATH) as f:
+        with open(settings.STATUS_FILE_PATH, 'w') as f:
             f.write(status)
 
     def update_status_from_file(self):
-        with open(settings.STATUS_FILE_PATH) as f:
-            status = f.read()
+        with open(settings.STATUS_FILE_PATH, 'r') as f:
+            status = f.read().strip()
+        if status not in ALARM_CODES:
+            raise SettingsError('Invalid status in STATUS_FILE_PATH file or ARMED/DISARMED settings misconfigured.')
         self._status = status
 
     def setup(self):
@@ -50,15 +56,44 @@ class AlarmManager(object):
             self.camera = camera
 
         # add sensors
+        self.setup_sensors()
+
+        # read status from file
+        self.update_status_from_file()
+
+        # create and start server
+        self.server = AlarmSocketServer.start()
+
+    def setup_sensors(self):
+        # add sensors
         for sensor in settings.SENSORS:
             s = Sensor(**sensor)
             s.setup()
             self.sensors.add(s)
 
-        # read status from file
-        self.update_status_from_file()
-        if self.status not in ALARM_CODES:
-            raise SettingsError('Invalid status in STATUS_FILE_PATH file or ARMED/DISARMED settings misconfigured.')
+    def scan_sensors(self, refresh_rate=.25):
+        self._sensor_scan_stopped.clear()
+        # scan all sensors continuously
+
+        while not self._stop_sensor_scan:
+            for sensor in self.sensors:
+                if sensor.read():
+                    # do something
+                    print('%s activated' % sensor.name)
+
+            time.sleep(refresh_rate)
+        self._sensor_scan_stopped.set()
+
+    def start_sensor_scan(self):
+        sensor_scan_thread = threading.Thread(target=self.scan_sensors)
+        self.sensor_scan_thread = sensor_scan_thread
+        sensor_scan_thread.daemon = True
+        sensor_scan_thread.start()
+
+    def stop_sensor_scan(self):
+        self._stop_sensor_scan = True
+        self._sensor_scan_stopped.wait()
+        self._stop_sensor_scan = False
 
     def arm(self):
         pass
@@ -90,8 +125,13 @@ class AlarmRequestHandler(SocketServer.BaseRequestHandler):
     def handle(self):
         data = self.request.recv(1024)
         # parse json
-        request = json.loads(data)
+        try:
+            request = json.loads(data)
+        except ValueError:
+            request = {"action": "None"}
+            print("Not JSON...")
         # pass request dictionary to the manager's request handler
+        self.request.sendall('received : %s' % data)
         self.server.mgr.handle_request(request)
 
         # print(data)
@@ -110,6 +150,14 @@ class AlarmSocketServer(SocketServer.ThreadingTCPServer):
     def __init__(self, server_address, handler, bind_and_activate=True, mgr=None):
         SocketServer.ThreadingTCPServer.__init__(self, server_address, handler, bind_and_activate=True)
         self.mgr = mgr
+
+    @classmethod
+    def start(cls):
+        new_server = cls(('0.0.0.0', 5555), AlarmRequestHandler)
+        listen_thread = threading.Thread(target=new_server.serve_forever)
+        listen_thread.daemon = True
+        listen_thread.start()
+        return new_server
 
 
 class SettingsError(Exception):

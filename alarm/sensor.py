@@ -17,5 +17,13 @@ class Sensor(object):
         else:
             io.setup(self.pin, io.IN)
 
-    def senses_something(self):
-        pass
+    def read(self):
+        if io.input(self.pin):
+            return True
+        return False
+
+
+class SensorManager(object):
+
+    def cleanup(self):
+        io.cleanup()
