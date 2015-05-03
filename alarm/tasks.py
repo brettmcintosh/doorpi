@@ -26,5 +26,4 @@ def play_sound(sound_file):
 
 @app.task
 def start_recording():
-
     pass

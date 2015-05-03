@@ -9,6 +9,7 @@ import settings
 from camera import Camera
 from sensor import Sensor
 from notification import LEDRing
+import routines
 
 
 ALARM_CODES = (settings.ARMED, settings.DISARMED)
@@ -29,6 +30,7 @@ class AlarmManager(object):
         self.is_triggered = False
         self.sent_notification = False
         self.server = None
+        self.current_routine = None
 
     @property
     def status(self):
@@ -52,9 +54,8 @@ class AlarmManager(object):
 
         # add camera
         if settings.CAMERA:
-            camera = Camera()
-            camera.configure()
-            self.camera = camera
+            self.camera = Camera()
+            self.camera.configure()
 
         # add sensors
         self.setup_sensors()
@@ -73,9 +74,10 @@ class AlarmManager(object):
             self.sensors[s.name] = s
 
     def scan_sensors(self, refresh_rate=.25):
+        # reset threading event
         self._sensor_scan_stopped.clear()
-        # scan all sensors continuously
 
+        # scan all sensors continuously
         while not self._stop_sensor_scan:
             for sensor in self.sensors.values():
                 if sensor.read():
@@ -88,6 +90,7 @@ class AlarmManager(object):
                     # print('%s activated' % sensor.name)
 
             time.sleep(refresh_rate)
+        # notify the shutdown method
         self._sensor_scan_stopped.set()
 
     def start_sensor_scan(self):
@@ -102,14 +105,15 @@ class AlarmManager(object):
         self._stop_sensor_scan = False
 
     def arm(self):
-        pass
+        self.start_routine(routines.ArmRoutine())
 
     def disarm(self):
-        pass
+        self.start_routine(routines.DisarmRoutine())
 
     def handle_request(self, request_dict):
         action = request_dict['action']
 
+        # lock here?
         if action == 'nfc':
             self.handle_nfc_request(request_dict)
 
@@ -118,9 +122,28 @@ class AlarmManager(object):
 
     def handle_nfc_request(self, request_dict):
         print('NFC Scan')
+        # check that nfc id is valid
+        if self.key_valid(request_dict.get('nfc_id')):
+
+            # toggle the status
+            if self.status == settings.ARMED:
+                self.disarm()
+            elif self.status == settings.DISARMED:
+                self.arm()
+        else:
+            # log the authentication attempt
+            pass
 
     def handle_sensor_request(self, request_dict):
         print('Sensor Event')
+
+    def start_routine(self, routine):
+        # cancel any running routines
+        if self.current_routine:
+                self.current_routine.cancel()
+
+        self.current_routine = routine
+        self.current_routine.start()
 
     @staticmethod
     def key_valid(unverified_key):
@@ -165,6 +188,7 @@ class AlarmSocketServer(SocketServer.ThreadingTCPServer):
 
     @classmethod
     def start(cls):
+        # create a network accessible server on port 5555 and start it on a new thread
         new_server = cls(('0.0.0.0', 5555), AlarmRequestHandler)
         listen_thread = threading.Thread(target=new_server.serve_forever)
         listen_thread.daemon = True
