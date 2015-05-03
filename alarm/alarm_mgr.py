@@ -20,10 +20,11 @@ class AlarmManager(object):
 
     def __init__(self):
         self.camera = None
-        self.sensors = set()
+        self.sensors = {}
         self.sensor_scan_thread = None
         self._stop_sensor_scan = False
         self._sensor_scan_stopped = threading.Event()
+        self._lock = threading.Lock()
         self._status = None
         self.is_triggered = False
         self.sent_notification = False
@@ -69,17 +70,22 @@ class AlarmManager(object):
         for sensor in settings.SENSORS:
             s = Sensor(**sensor)
             s.setup()
-            self.sensors.add(s)
+            self.sensors[s.name] = s
 
     def scan_sensors(self, refresh_rate=.25):
         self._sensor_scan_stopped.clear()
         # scan all sensors continuously
 
         while not self._stop_sensor_scan:
-            for sensor in self.sensors:
+            for sensor in self.sensors.values():
                 if sensor.read():
-                    # do something
-                    print('%s activated' % sensor.name)
+                    # do something; don't forget to Lock!
+                    request_dict = {'action': 'sensor', 'sensor': sensor.name}
+                    self.handle_request(request_dict)
+                    # with self._lock:
+                    #     if not self.is_triggered:
+                    #         self.is_triggered = True
+                    # print('%s activated' % sensor.name)
 
             time.sleep(refresh_rate)
         self._sensor_scan_stopped.set()
@@ -104,11 +110,17 @@ class AlarmManager(object):
     def handle_request(self, request_dict):
         action = request_dict['action']
 
-        if action == 'nfc_scan':
-            print('NFC Scan')
+        if action == 'nfc':
+            self.handle_nfc_request(request_dict)
 
         elif action == 'sensor':
-            print('Sensor Event')
+            self.handle_sensor_request(request_dict)
+
+    def handle_nfc_request(self, request_dict):
+        print('NFC Scan')
+
+    def handle_sensor_request(self, request_dict):
+        print('Sensor Event')
 
     @staticmethod
     def key_valid(unverified_key):
@@ -147,7 +159,7 @@ class AlarmRequestHandler(SocketServer.BaseRequestHandler):
 
 class AlarmSocketServer(SocketServer.ThreadingTCPServer):
 
-    def __init__(self, server_address, handler, bind_and_activate=True, mgr=None):
+    def __init__(self, server_address, handler, mgr=None):
         SocketServer.ThreadingTCPServer.__init__(self, server_address, handler, bind_and_activate=True)
         self.mgr = mgr
 
