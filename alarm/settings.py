@@ -7,8 +7,10 @@ VIDEO_PATH = "/home/pi/camera/"
 STATUS_FILE_PATH = "/var/lib/misc/alarm"
 LOG_FILE_PATH = "/home/pi/sec/sensor.log"
 
-# use passlib.hash.sha256_crypt.encrypt("password")
-KEY_HASHES = ('', )
+# To add a key, use import alarm.alarm_mgr; alarm.alarm_mgr.AlarmManager.add_new_key()
+KEY_HASHES = ('',
+              '12345',
+              '67890', )
 
 MOTION_SENSOR = {'pin': 18,
                  'name': 'Motion Hallway'}

@@ -1,3 +1,4 @@
+import re
 from passlib.hash import sha256_crypt
 import threading
 import SocketServer
@@ -64,7 +65,7 @@ class AlarmManager(object):
         self.update_status_from_file()
 
         # create and start server
-        self.server = AlarmSocketServer.start()
+        self.server = AlarmSocketServer.start(mgr=self)
 
     def setup_sensors(self):
         # add sensors
@@ -81,13 +82,9 @@ class AlarmManager(object):
         while not self._stop_sensor_scan:
             for sensor in self.sensors.values():
                 if sensor.read():
-                    # do something; don't forget to Lock!
+                    # send to request handler
                     request_dict = {'action': 'sensor', 'sensor': sensor.name}
                     self.handle_request(request_dict)
-                    # with self._lock:
-                    #     if not self.is_triggered:
-                    #         self.is_triggered = True
-                    # print('%s activated' % sensor.name)
 
             time.sleep(refresh_rate)
         # notify the shutdown method
@@ -113,15 +110,15 @@ class AlarmManager(object):
     def handle_request(self, request_dict):
         action = request_dict['action']
 
-        # lock here?
-        if action == 'nfc':
-            self.handle_nfc_request(request_dict)
+        with self._lock:
+            if action == 'nfc':
+                self.handle_nfc_request(request_dict)
 
-        elif action == 'sensor':
-            self.handle_sensor_request(request_dict)
+            elif action == 'sensor':
+                self.handle_sensor_request(request_dict)
 
     def handle_nfc_request(self, request_dict):
-        print('NFC Scan')
+        print('NFC Scan: %s' % request_dict.get('nfc_id'))
         # check that nfc id is valid
         if self.key_valid(request_dict.get('nfc_id')):
 
@@ -135,12 +132,12 @@ class AlarmManager(object):
             pass
 
     def handle_sensor_request(self, request_dict):
-        print('Sensor Event')
+        print('Sensor Event: %s' % request_dict.get('sensor'))
 
     def start_routine(self, routine):
         # cancel any running routines
         if self.current_routine:
-                self.current_routine.cancel()
+            self.current_routine.cancel()
 
         self.current_routine = routine
         self.current_routine.start()
@@ -153,6 +150,40 @@ class AlarmManager(object):
                 return True
 
         return False
+
+    @staticmethod
+    def add_new_key():
+        # python 2/3 compatible version of input
+        try:
+            input = raw_input
+        except NameError:
+            pass
+
+        print("Enter the new key and press Enter.")
+        new_key = input()
+        print("Enter the new key again and press Enter.")
+        new_key_again = input()
+
+        if new_key == new_key_again:
+            new_hash = sha256_crypt.encrypt(new_key)
+            old_hash_list = settings.KEY_HASHES
+            new_hash_list = old_hash_list + (new_hash, )
+            new_hash_list_string = str(new_hash_list)
+            new_hash_list_string_formatted = new_hash_list_string.replace(', ', ',\n              ')
+
+            with open('alarm/settings.py', 'r+') as f:
+                settings_string = f.read()
+                new_settings = re.sub(r'KEY_HASHES = \(.+\)',
+                                      'KEY_HASHES = %s' % str(new_hash_list_string_formatted),
+                                      settings_string,
+                                      flags=re.DOTALL)
+                f.seek(0)
+                f.truncate()
+                f.write(new_settings)
+                print('New key added to settings file.')
+
+        else:
+            print("The keys you entered do not match.  Try again.")
 
 
 class AlarmRequestHandler(SocketServer.BaseRequestHandler):
@@ -187,9 +218,9 @@ class AlarmSocketServer(SocketServer.ThreadingTCPServer):
         self.mgr = mgr
 
     @classmethod
-    def start(cls):
+    def start(cls, mgr=None):
         # create a network accessible server on port 5555 and start it on a new thread
-        new_server = cls(('0.0.0.0', 5555), AlarmRequestHandler)
+        new_server = cls(('0.0.0.0', 5555), AlarmRequestHandler, mgr=mgr)
         listen_thread = threading.Thread(target=new_server.serve_forever)
         listen_thread.daemon = True
         listen_thread.start()
