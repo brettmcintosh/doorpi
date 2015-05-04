@@ -4,7 +4,7 @@ try:
 except (RuntimeError, AttributeError):
     print("Not on RPi.  Can't access camera.")
 
-import settings
+from alarm import settings
 
 
 class Camera(PiCamera):

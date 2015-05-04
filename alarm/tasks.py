@@ -1,7 +1,6 @@
 from celery import Celery
 import pygame.mixer as mix    # pygame should already be installed on raspbian
-
-from notification import LEDRing
+from alarm.notification import LEDRing
 
 
 app = Celery('tasks', backend='amqp', broker='amqp://')
@@ -26,4 +25,9 @@ def play_sound(sound_file):
 
 @app.task
 def start_recording():
+    pass
+
+
+@app.task
+def send_email(message):
     pass

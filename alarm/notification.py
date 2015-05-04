@@ -1,5 +1,5 @@
 import serial
-import settings
+from alarm import settings
 
 
 class LEDRing(object):
@@ -11,12 +11,10 @@ class LEDRing(object):
 
     def __enter__(self):
         self.serial_connection = serial.Serial(self.device_path, self.baudrate)
-        return self.serial_connection
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.serial_connection.close()
 
     def send_command(self, command):
-        self.serial_connection.write(command)
-
-
+        self.serial_connection.write(bytes(command, 'ascii'))

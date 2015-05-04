@@ -1,16 +1,19 @@
 import re
 from passlib.hash import sha256_crypt
 import threading
-import SocketServer
+try:
+    import SocketServer as socketserver
+except ImportError:
+    import socketserver
 import socket
 import json
 import time
 
-import settings
-from camera import Camera
-from sensor import Sensor
-from notification import LEDRing
-import routines
+from alarm import settings
+from alarm.camera import Camera
+from alarm.sensor import Sensor
+from alarm.notification import LEDRing
+from alarm import routines
 
 
 ALARM_CODES = (settings.ARMED, settings.DISARMED)
@@ -186,7 +189,7 @@ class AlarmManager(object):
             print("The keys you entered do not match.  Try again.")
 
 
-class AlarmRequestHandler(SocketServer.BaseRequestHandler):
+class AlarmRequestHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         data = self.request.recv(1024)
@@ -211,10 +214,10 @@ class AlarmRequestHandler(SocketServer.BaseRequestHandler):
         # self.request.sendall(response)
 
 
-class AlarmSocketServer(SocketServer.ThreadingTCPServer):
+class AlarmSocketServer(socketserver.ThreadingTCPServer):
 
     def __init__(self, server_address, handler, mgr=None):
-        SocketServer.ThreadingTCPServer.__init__(self, server_address, handler, bind_and_activate=True)
+        socketserver.ThreadingTCPServer.__init__(self, server_address, handler, bind_and_activate=True)
         self.mgr = mgr
 
     @classmethod
@@ -237,7 +240,7 @@ def client(ip, port, message):
     try:
         sock.sendall(message)
         response = sock.recv(1024)
-        print "Received: {}".format(response)
+        print("Received: %s" % response)
     finally:
         sock.close()
 
@@ -259,7 +262,7 @@ if __name__ == "__main__":
     # Exit the server thread when the main thread terminates
     server_thread.daemon = True
     server_thread.start()
-    print "Server loop running in thread:", server_thread.name
+    print("Server loop running in thread:", server_thread.name)
 
     # message1 = json.dumps({'action': 'nfc_scan', 'show': 'Simpsons'})
     # message2 = json.dumps({'action': 'sensor', 'show': 'Simpsons'})
