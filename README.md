@@ -1,3 +1,5 @@
+## A newer version of this project is available [here](https://github.com/brettmcintosh/doorpi2)
+
 ## DoorPi
 
 #### Overview:
